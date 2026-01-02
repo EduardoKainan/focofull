@@ -21,12 +21,24 @@ const Habits: React.FC<HabitsProps> = ({ habits, projects = [], onToggleHabit, o
   const [isGenerating, setIsGenerating] = useState(false);
   const [aiGoal, setAiGoal] = useState('');
   
-  const [formData, setFormData] = useState({
+  // Fix: Explicitly define the state type to allow optional reminder fields, matching the Habit interface
+  const [formData, setFormData] = useState<{
+    name: string;
+    microAction: string;
+    icon: string;
+    projectId?: string;
+    reminder: {
+      type: ReminderType;
+      windowStart?: string;
+      windowEnd?: string;
+      frequency?: number;
+    };
+  }>({
     name: '',
     microAction: '',
     icon: '🌱',
-    projectId: undefined as string | undefined,
-    reminder: { type: 'none' as ReminderType, windowStart: '09:00', windowEnd: '11:00', frequency: 3 }
+    projectId: undefined,
+    reminder: { type: 'none', windowStart: '09:00', windowEnd: '11:00', frequency: 3 }
   });
 
   const handleAiGenerate = async () => {
@@ -50,6 +62,7 @@ const Habits: React.FC<HabitsProps> = ({ habits, projects = [], onToggleHabit, o
 
   const openEdit = (habit: Habit) => {
     setEditingHabit(habit);
+    // Fix: Properly assign optional reminder fields
     setFormData({
       name: habit.name,
       microAction: habit.microAction,

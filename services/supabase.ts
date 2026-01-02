@@ -8,13 +8,38 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 /**
- * Utilitário para lidar com erros de forma amigável ao TDAH (sem alertas técnicos assustadores)
+ * Utilitário para lidar com erros de forma amigável ao TDAH e clara para o desenvolvedor.
  */
 export const handleSupabaseError = (error: any) => {
-  // Verificamos se o erro tem uma estrutura de erro do Supabase/Postgrest
-  const errorMessage = error?.message || error?.details || (typeof error === 'object' ? JSON.stringify(error) : String(error));
+  // Extração robusta da mensagem de erro
+  let message = 'Erro desconhecido';
+  if (typeof error === 'string') {
+    message = error;
+  } else if (error?.message) {
+    message = error.message;
+  } else if (error?.details) {
+    message = error.details;
+  } else {
+    try {
+      message = JSON.stringify(error);
+    } catch (e) {
+      message = String(error);
+    }
+  }
+
+  // Log detalhado para o desenvolvedor no console (sem converter para string diretamente)
   console.error('Erro de Sincronização Supabase:', {
-    message: errorMessage,
-    error: error
+    code: error?.code,
+    message: message,
+    raw: error
   });
+
+  // Instrução específica para erro de RLS
+  if (error?.code === '42501') {
+    console.warn(
+      '%c🛡️ SUPABASE RLS ERROR (42501):%c\nVocê precisa configurar as políticas de segurança no seu banco de dados.\nExecute o SQL abaixo no editor do Supabase:\n\nALTER TABLE profiles ENABLE ROW LEVEL SECURITY;\nCREATE POLICY "Dono gerencia próprio perfil" ON profiles FOR ALL USING (auth.uid() = id);',
+      'font-weight: bold; color: white; background: red; padding: 2px 5px; border-radius: 3px;',
+      'color: inherit;'
+    );
+  }
 };

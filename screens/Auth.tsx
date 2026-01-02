@@ -21,10 +21,12 @@ const Auth: React.FC<AuthProps> = ({ onSuccess }) => {
 
     try {
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        // Fix: Cast auth to any to resolve signInWithPassword property missing error
+        const { error } = await (supabase.auth as any).signInWithPassword({ email, password });
         if (error) throw error;
       } else {
-        const { error } = await supabase.auth.signUp({ 
+        // Fix: Cast auth to any to resolve signUp property missing error
+        const { error } = await (supabase.auth as any).signUp({ 
           email, 
           password,
           options: {

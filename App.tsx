@@ -33,37 +33,29 @@ const App: React.FC = () => {
 
   const fetchData = useCallback(async () => {
     setIsSyncing(true);
-    console.log('App: Sincronizando dados...');
     
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      // Fix: Cast auth to any to resolve getUser property missing error
+      const { data: { user } } = await (supabase.auth as any).getUser();
       
       if (!user) {
-        console.log('App: Sem usuário.');
         setActiveScreen('auth');
         setIsSyncing(false);
         return;
       }
 
-      // Carregar Perfil
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .single();
       
-      // LÓGICA DE PROTEÇÃO CONTRA LOOP:
-      // Se estamos em uma tela de "conteúdo", não forçamos a volta para o onboarding mesmo que o fetch demore
       const isInsideApp = ['home', 'work', 'habits', 'projects', 'focus', 'garden', 'evolution'].includes(activeScreen);
 
       if (profileError || !profileData || !profileData.onboarding_completed) {
         if (!isInsideApp) {
-          console.log('App: Onboarding necessário.');
           setActiveScreen('onboarding');
-        } else {
-          console.log('App: Perfil incompleto no banco, mas usuário já está na Home. Mantendo.');
         }
       } else {
-        console.log('App: Perfil ok.');
         setProfile({
           id: profileData.id,
           fullName: profileData.full_name || 'Viajante',
@@ -77,13 +69,11 @@ const App: React.FC = () => {
           level: profileData.current_level || 1
         }));
         
-        // Só mudamos para home se estivermos saindo de uma tela de "bloqueio"
         if (activeScreen === 'auth' || activeScreen === 'onboarding') {
           setActiveScreen('home');
         }
       }
 
-      // Carregar Restante dos Dados
       const [{ data: habitsData }, { data: projectsData }, { data: workData }] = await Promise.all([
         supabase.from('habits').select('*'),
         supabase.from('projects').select('*'),
@@ -99,11 +89,11 @@ const App: React.FC = () => {
     } finally {
       setIsSyncing(false);
     }
-  }, [activeScreen]); // activeScreen adicionado aqui para a lógica de proteção
+  }, [activeScreen]);
 
-  // Observar mudanças na sessão
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    // Fix: Cast auth to any to resolve onAuthStateChange property missing error
+    const { data: { subscription } } = (supabase.auth as any).onAuthStateChange((event: any, session: any) => {
       if (session) {
         fetchData();
       } else {
@@ -143,7 +133,8 @@ const App: React.FC = () => {
 
   const addWorkTask = async (task: Omit<WorkTask, 'id' | 'status'>) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      // Fix: Cast auth to any to resolve getUser property missing error
+      const { data: { user } } = await (supabase.auth as any).getUser();
       if (!user) return;
 
       const { data, error } = await supabase
@@ -162,11 +153,11 @@ const App: React.FC = () => {
   };
 
   const handleOnboardingComplete = async (data: any) => {
-    // 1. Transição Otimista Imediata para evitar o loop
+    // 1. Transição Otimista Imediata para garantir fluidez no TDAH
     setActiveScreen('home');
     setProfile(prev => ({
       ...(prev || {}),
-      id: 'pending',
+      id: 'local-user',
       fullName: 'Viajante',
       energyLevel: data.energy,
       difficulties: data.difficulties,
@@ -174,9 +165,9 @@ const App: React.FC = () => {
     } as Profile));
     
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      // Fix: Cast auth to any to resolve getUser property missing error
+      const { data: { user } } = await (supabase.auth as any).getUser();
       if (user) {
-        console.log('App: Persistindo onboarding no Supabase...');
         const { error } = await supabase.from('profiles').upsert({
           id: user.id,
           energy_level: data.energy,
@@ -186,15 +177,15 @@ const App: React.FC = () => {
         });
 
         if (error) {
-          console.error('App: Erro detalhado ao finalizar onboarding:', JSON.stringify(error, null, 2));
-          throw error;
+          // Log detalhado corrigido (passando o objeto diretamente)
+          console.error('App: Erro ao persistir onboarding:', error);
+          handleSupabaseError(error);
+          return;
         }
         
-        console.log('App: Sucesso. Atualizando dados...');
         await fetchData();
       }
     } catch (error) {
-      // Já estamos na home (estado otimista), não interrompemos o fluxo
       handleSupabaseError(error);
     }
   };
@@ -219,7 +210,6 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Indicador de Nuvem */}
       {activeScreen !== 'auth' && activeScreen !== 'onboarding' && (
         <div className="fixed top-6 right-6 z-[60] flex items-center gap-2 px-3 py-1.5 bg-white/80 backdrop-blur-sm rounded-full border border-slate-100 shadow-sm transition-all animate-in fade-in slide-in-from-top-2">
           {isSyncing ? (

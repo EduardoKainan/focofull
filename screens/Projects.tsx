@@ -20,10 +20,19 @@ const Projects: React.FC<ProjectsProps> = ({ projects, habits, onCompleteNextAct
   const [isGenerating, setIsGenerating] = useState(false);
   const [aiGoal, setAiGoal] = useState('');
   
-  const [formData, setFormData] = useState({
+  // Fix: Explicitly define the state type to allow optional reminder fields, matching the Project interface
+  const [formData, setFormData] = useState<{
+    name: string;
+    nextAction: string;
+    reminder: {
+      type: ReminderType;
+      windowStart?: string;
+      windowEnd?: string;
+    };
+  }>({
     name: '',
     nextAction: '',
-    reminder: { type: 'none' as ReminderType, windowStart: '09:00', windowEnd: '11:00' }
+    reminder: { type: 'none', windowStart: '09:00', windowEnd: '11:00' }
   });
 
   const handleAiGenerate = async () => {
@@ -46,6 +55,7 @@ const Projects: React.FC<ProjectsProps> = ({ projects, habits, onCompleteNextAct
 
   const openEdit = (project: Project) => {
     setEditingProject(project);
+    // Fix: Properly assign optional reminder fields
     setFormData({
       name: project.name,
       nextAction: project.nextAction,
