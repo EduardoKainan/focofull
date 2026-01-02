@@ -1,0 +1,7 @@
+{
+  "name": "MindfulFlow - Apoio ADHD",
+  "description": "Um sistema de apoio empático e não punitivo para pessoas com TDAH, focado em micro-ações, rotinas flexíveis e auxílio para começar tarefas.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
