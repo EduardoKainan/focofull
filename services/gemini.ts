@@ -1,7 +1,17 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Inicialização segura: verifica se a chave existe para não lançar erro imediato no build/runtime
+const getAiClient = () => {
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) {
+    console.warn("⚠️ API_KEY não encontrada nas variáveis de ambiente. As funcionalidades de IA estarão desativadas.");
+    return null;
+  }
+  return new GoogleGenAI({ apiKey });
+};
+
+const ai = getAiClient();
 
 const SYSTEM_PROMPT = `Você é o "Mindful Coach", um assistente empático especializado em TDAH. 
 Seu objetivo é ajudar usuários a superarem a paralisia de decisão e a procrastinação.
@@ -18,6 +28,7 @@ REGRAS NARRATIVAS:
 - Se o objetivo for grande, quebre-o até que a primeira ação leve menos de 2 minutos.`;
 
 export const getCoachAdvice = async (prompt: string, context?: any) => {
+  if (!ai) return "Estou aqui com você. Seu jardim está em paz.";
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
@@ -35,6 +46,11 @@ export const getCoachAdvice = async (prompt: string, context?: any) => {
 };
 
 export const breakDownTask = async (taskTitle: string) => {
+  if (!ai) return {
+    steps: ["Apenas olhe para a tarefa", "Respire fundo", "Faça por 2 minutos"],
+    motivationalQuote: "O importante é começar. Cada semente importa."
+  };
+  
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
@@ -67,6 +83,8 @@ export const breakDownTask = async (taskTitle: string) => {
 };
 
 export const generateProjectPlan = async (goal: string) => {
+  if (!ai) return { name: goal, nextAction: "Abrir um bloco de notas" };
+  
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
@@ -93,6 +111,8 @@ export const generateProjectPlan = async (goal: string) => {
 };
 
 export const generateHabitPlan = async (goal: string) => {
+  if (!ai) return { name: goal, microAction: "Fazer por 1 minuto", icon: "🌱" };
+  
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
