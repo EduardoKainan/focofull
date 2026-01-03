@@ -68,6 +68,9 @@ export interface GamificationState {
   unlockedElements: string[];
   lastActionDate: string;
   history: DailyStat[];
+  currentStreak: number;
+  longestStreak: number;
+  streakActiveToday: boolean;
 }
 
 export type Screen = 'auth' | 'onboarding' | 'home' | 'habits' | 'projects' | 'focus' | 'garden' | 'evolution' | 'work';

@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Home, Timer, Flower2, Briefcase, Activity, FolderKanban, Sparkles } from 'lucide-react';
+import { Home, Timer, Flower2, Briefcase, Activity, FolderKanban, Sparkles, TrendingUp } from 'lucide-react';
 import { Screen } from '../types';
 
 interface LayoutProps {
@@ -17,6 +17,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeScreen, onNavigate }) =
     { id: 'focus', icon: Timer, label: 'Foco' },
     { id: 'projects', icon: FolderKanban, label: 'Projetos' },
     { id: 'garden', icon: Flower2, label: 'Jardim' },
+    { id: 'evolution', icon: TrendingUp, label: 'Evolução' },
   ];
 
   return (
@@ -32,7 +33,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeScreen, onNavigate }) =
         <nav className="flex-1 px-4 py-4 space-y-2">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = activeScreen === item.id || (item.id === 'garden' && activeScreen === 'evolution');
+            const isActive = activeScreen === item.id;
             return (
               <button
                 key={item.id}
@@ -71,7 +72,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeScreen, onNavigate }) =
         <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-slate-100 px-4 py-3 flex justify-around items-center z-50">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = activeScreen === item.id || (item.id === 'garden' && activeScreen === 'evolution');
+            const isActive = activeScreen === item.id;
             return (
               <button
                 key={item.id}

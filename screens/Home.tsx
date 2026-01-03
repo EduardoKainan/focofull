@@ -8,6 +8,8 @@ interface HomeProps {
   tasks: Task[];
   energyLevel: number;
   glowPoints: number;
+  streak?: number;
+  streakActive?: boolean;
   onCompleteTask: (id: string) => void;
   onUpdateEnergy?: (level: number) => void;
 }
@@ -18,7 +20,7 @@ interface FloatingEffect {
   y: number;
 }
 
-const Home: React.FC<HomeProps> = ({ tasks, energyLevel, glowPoints, onCompleteTask, onUpdateEnergy }) => {
+const Home: React.FC<HomeProps> = ({ tasks, energyLevel, glowPoints, streak = 0, streakActive = false, onCompleteTask, onUpdateEnergy }) => {
   const [loadingStep, setLoadingStep] = useState<string | null>(null);
   const [aiBreakdown, setAiBreakdown] = useState<{steps: string[], quote: string} | null>(null);
   const [floatingEffects, setFloatingEffects] = useState<FloatingEffect[]>([]);
@@ -83,18 +85,33 @@ const Home: React.FC<HomeProps> = ({ tasks, energyLevel, glowPoints, onCompleteT
             {greeting}
           </h2>
         </div>
-        <div 
-          ref={counterRef}
-          className={`bg-white px-6 py-4 rounded-[32px] shadow-sm border border-indigo-50 flex items-center gap-3 group cursor-default transition-all duration-500 shrink-0 ${
-            isCounterPulsing ? 'scale-110 border-indigo-200 shadow-indigo-100 ring-8 ring-indigo-50' : 'scale-100'
-          }`}
-        >
-          <Sparkles size={20} className={`text-indigo-600 transition-transform ${isCounterPulsing ? 'rotate-12 scale-110' : ''}`} />
-          <div className="flex flex-col">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Glow</span>
-            <span className={`text-2xl font-black tabular-nums transition-colors ${isCounterPulsing ? 'text-indigo-600' : 'text-slate-900'}`}>
-              {glowPoints}
-            </span>
+        
+        <div className="flex gap-4 shrink-0">
+          {/* Streak Badge estilo Duolingo */}
+          <div className={`px-5 py-3 rounded-full border flex items-center gap-3 transition-all duration-500 ${streakActive ? 'bg-orange-50 border-orange-100 shadow-sm' : 'bg-white border-slate-100 opacity-60'}`}>
+             <div className="relative">
+               <Zap size={20} className={`${streakActive ? 'text-orange-500 fill-orange-500 animate-bounce' : 'text-slate-300'}`} />
+               {streakActive && <div className="absolute inset-0 bg-orange-400 blur-md rounded-full opacity-20 animate-pulse" />}
+             </div>
+             <div className="flex flex-col">
+               <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Ofensiva</span>
+               <span className={`text-xl font-black ${streakActive ? 'text-orange-600' : 'text-slate-400'}`}>{streak} d</span>
+             </div>
+          </div>
+
+          <div 
+            ref={counterRef}
+            className={`bg-white px-6 py-4 rounded-[32px] shadow-sm border border-indigo-50 flex items-center gap-3 group cursor-default transition-all duration-500 ${
+              isCounterPulsing ? 'scale-110 border-indigo-200 shadow-indigo-100 ring-8 ring-indigo-50' : 'scale-100'
+            }`}
+          >
+            <Sparkles size={20} className={`text-indigo-600 transition-transform ${isCounterPulsing ? 'rotate-12 scale-110' : ''}`} />
+            <div className="flex flex-col">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Glow</span>
+              <span className={`text-2xl font-black tabular-nums transition-colors ${isCounterPulsing ? 'text-indigo-600' : 'text-slate-900'}`}>
+                {glowPoints}
+              </span>
+            </div>
           </div>
         </div>
       </header>

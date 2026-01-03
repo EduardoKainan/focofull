@@ -1,247 +1,309 @@
 
-import React, { useState } from 'react';
-import { Sparkles, Leaf, Zap, Timer, ChevronRight, Info, Star, Cloud, Sun } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Sparkles, Leaf, Zap, Timer, ChevronRight, Info, Star, Cloud, Sun, Flame, Trophy, TrendingUp, Target } from 'lucide-react';
 import { DailyStat } from '../types';
 import { getCoachAdvice } from '../services/gemini';
 
 interface EvolutionProps {
   history: DailyStat[];
+  streak?: number;
+  longestStreak?: number;
 }
 
-const Evolution: React.FC<EvolutionProps> = ({ history }) => {
+const Evolution: React.FC<EvolutionProps> = ({ history, streak = 0, longestStreak = 0 }) => {
   const [insight, setInsight] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const last7Days = Array.from({ length: 7 }).map((_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - (6 - i));
-    const dateStr = d.toISOString().split('T')[0];
-    const existing = history.find(h => h.date === dateStr);
-    return existing || { date: dateStr, points: 0, tasksDone: 0, energy: 0, focusMinutes: 0 };
-  });
+  const last7Days = useMemo(() => {
+    return Array.from({ length: 7 }).map((_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (6 - i));
+      const dateStr = d.toISOString().split('T')[0];
+      const existing = history.find(h => h.date === dateStr);
+      return existing || { date: dateStr, points: 0, tasksDone: 0, energy: 0, focusMinutes: 0 };
+    });
+  }, [history]);
+
+  const maxPoints = Math.max(...last7Days.map(h => h.points), 10);
+
+  // Lógica para gerar o path do gráfico de área (Bezier Curves)
+  const chartPath = useMemo(() => {
+    const width = 1000;
+    const height = 200;
+    const padding = 40;
+    const usableHeight = height - padding * 2;
+    const step = width / (last7Days.length - 1);
+
+    const points = last7Days.map((d, i) => ({
+      x: i * step,
+      y: height - padding - (d.points / (maxPoints || 1)) * usableHeight
+    }));
+
+    if (points.length === 0) return "";
+
+    let path = `M ${points[0].x} ${points[0].y}`;
+    for (let i = 0; i < points.length - 1; i++) {
+      const curr = points[i];
+      const next = points[i + 1];
+      const controlX = (curr.x + next.x) / 2;
+      path += ` C ${controlX} ${curr.y}, ${controlX} ${next.y}, ${next.x} ${next.y}`;
+    }
+    return path;
+  }, [last7Days, maxPoints]);
 
   const handleRequestInsight = async () => {
     setLoading(true);
     const activeDays = history.filter(h => h.points > 0).length;
     const totalFocus = history.reduce((acc, curr) => acc + curr.focusMinutes, 0);
-    const prompt = `Analise este progresso de um usuário com TDAH: ${activeDays} dias ativos, ${totalFocus} minutos de foco. Dê um feedback curto, lúdico e muito empático, comparando com um jardim que floresce no seu próprio tempo.`;
+    const prompt = `Analise este progresso: ${activeDays} dias ativos, ${totalFocus} minutos de foco. Dê um feedback curto, lúdico e muito empático para alguém com TDAH.`;
     const response = await getCoachAdvice(prompt);
-    setInsight(response || "Seu jardim está crescendo lindamente, no seu ritmo.");
+    setInsight(response);
     setLoading(false);
   };
 
-  const maxPoints = Math.max(...last7Days.map(h => h.points), 10);
-
   return (
     <div className="animate-in fade-in duration-1000 pb-20">
-      <header className="mb-8">
-        <h1 className="text-xs font-bold text-indigo-400 mb-1 uppercase tracking-[0.3em]">Minha Jornada</h1>
-        <h2 className="text-3xl font-extrabold text-slate-900 leading-tight tracking-tight">Evolução Suave</h2>
+      <header className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <h1 className="text-[10px] font-black text-indigo-400 mb-2 uppercase tracking-[0.4em]">Analytics Pessoal</h1>
+          <h2 className="text-4xl font-black text-slate-900 leading-tight tracking-tight">Sua Sinfonia Diária</h2>
+        </div>
+        <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-2xl border border-slate-100 shadow-sm">
+          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Evolução em Tempo Real</span>
+        </div>
       </header>
 
-      {/* Insight da IA Coach - Acolhimento Narrativo (Agora solicitado) */}
-      <div className="bg-gradient-to-br from-indigo-50/50 to-white p-8 rounded-[40px] border border-indigo-100/50 shadow-sm mb-12 relative overflow-hidden min-h-[160px] flex flex-col justify-center">
-        <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
-          <Sparkles size={80} className="text-indigo-600" />
+      {/* Flagship: Gráfico de Impacto Moderno */}
+      <section className="mb-12">
+        <div className="bg-white rounded-[48px] p-10 border border-slate-100 shadow-xl shadow-slate-200/40 relative overflow-hidden group">
+          <div className="flex justify-between items-center mb-10">
+            <div>
+              <h3 className="font-black text-xl text-slate-900 flex items-center gap-2">
+                <TrendingUp size={20} className="text-indigo-600" />
+                Rastro de Brilho
+              </h3>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Pontos Glow Acumulados</p>
+            </div>
+            <div className="flex gap-2">
+              <span className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-indigo-100">7 Dias</span>
+            </div>
+          </div>
+
+          <div className="relative h-[250px] w-full">
+            <svg viewBox="0 0 1000 250" className="w-full h-full overflow-visible" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="gradientGlow" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stopColor="#4F46E5" stopOpacity="0.3" />
+                  <stop offset="100%" stopColor="#4F46E5" stopOpacity="0" />
+                </linearGradient>
+                <filter id="glow">
+                  <feGaussianBlur stdDeviation="6" result="coloredBlur" />
+                  <feMerge>
+                    <feMergeNode in="coloredBlur" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
+              </defs>
+
+              {/* Área Sombreada */}
+              <path 
+                d={`${chartPath} L 1000 250 L 0 250 Z`} 
+                fill="url(#gradientGlow)" 
+                className="animate-in fade-in duration-1000 delay-500"
+              />
+
+              {/* Linha Principal */}
+              <path 
+                d={chartPath} 
+                fill="none" 
+                stroke="#4F46E5" 
+                strokeWidth="6" 
+                strokeLinecap="round" 
+                filter="url(#glow)"
+                className="animate-dash"
+                style={{ strokeDasharray: 2000, strokeDashoffset: 0 }}
+              />
+
+              {/* Pontos de Interação */}
+              {last7Days.map((d, i) => {
+                const step = 1000 / (last7Days.length - 1);
+                const x = i * step;
+                const y = 250 - 40 - (d.points / (maxPoints || 1)) * 170;
+                return (
+                  <g key={i} className="cursor-pointer group/point">
+                    <circle 
+                      cx={x} cy={y} r="8" 
+                      fill="white" 
+                      stroke="#4F46E5" 
+                      strokeWidth="4" 
+                      className="transition-all duration-300 group-hover/point:r-12 shadow-lg" 
+                    />
+                    {d.points > 0 && (
+                      <text 
+                        x={x} y={y - 20} 
+                        textAnchor="middle" 
+                        className="text-[24px] font-black fill-indigo-600 opacity-0 group-hover/point:opacity-100 transition-opacity"
+                      >
+                        {d.points}
+                      </text>
+                    )}
+                  </g>
+                );
+              })}
+            </svg>
+          </div>
+
+          <div className="flex justify-between mt-8 px-2">
+            {last7Days.map((d, i) => (
+              <span key={i} className="text-[10px] font-black text-slate-300 uppercase tracking-widest">
+                {new Date(d.date).toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '')}
+              </span>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Ofensiva Duolingo Style */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+        <div className="bg-gradient-to-br from-orange-400 via-rose-500 to-indigo-600 rounded-[48px] p-10 text-white shadow-2xl shadow-orange-200/50 relative overflow-hidden group">
+          <div className="absolute -top-10 -right-10 w-48 h-48 bg-white/10 rounded-full blur-3xl group-hover:scale-125 transition-transform duration-1000" />
+          <div className="relative z-10">
+            <div className="flex items-center gap-3 mb-8">
+              <div className="w-12 h-12 bg-white/20 backdrop-blur-xl rounded-2xl flex items-center justify-center border border-white/30">
+                <Flame size={24} className="fill-white" />
+              </div>
+              <span className="text-xs font-black uppercase tracking-[0.2em] opacity-80">Ofensiva Imbatível</span>
+            </div>
+            <div className="flex items-baseline gap-4 mb-4">
+              <span className="text-8xl font-black tracking-tighter tabular-nums drop-shadow-lg">{streak}</span>
+              <span className="text-2xl font-bold opacity-80">DIAS</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm font-bold bg-white/20 w-fit px-4 py-2 rounded-full border border-white/20 backdrop-blur-md">
+               <Target size={16} /> 
+               <span>Mantenha o foco por você</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-[48px] p-10 border border-slate-100 shadow-xl shadow-slate-100/50 flex flex-col justify-between group relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-10 opacity-5 group-hover:scale-110 transition-all duration-1000">
+             <Trophy size={140} />
+          </div>
+          <div>
+            <div className="flex items-center gap-3 mb-8">
+              <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-500 border border-amber-100">
+                <Trophy size={24} />
+              </div>
+              <span className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Recorde Eterno</span>
+            </div>
+            <div className="flex items-baseline gap-4 mb-4">
+              <span className="text-8xl font-black text-slate-900 tracking-tighter tabular-nums">{longestStreak}</span>
+              <span className="text-2xl font-bold text-slate-400">DIAS</span>
+            </div>
+          </div>
+          <div className="h-4 w-full bg-slate-50 rounded-full overflow-hidden mt-6 border border-slate-100">
+             <div 
+               className="h-full bg-gradient-to-r from-amber-400 to-orange-500 transition-all duration-1000 shadow-[0_0_15px_rgba(251,191,36,0.5)]" 
+               style={{ width: `${Math.min((streak / (longestStreak || 1)) * 100, 100)}%` }} 
+             />
+          </div>
+        </div>
+      </div>
+
+      {/* Insight da IA Coach Glassmorphism */}
+      <div className="bg-white/40 backdrop-blur-2xl p-10 rounded-[56px] border border-white shadow-2xl shadow-indigo-100/30 mb-12 relative overflow-hidden group">
+        <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:rotate-12 transition-transform duration-700">
+          <Sparkles size={120} className="text-indigo-600" />
         </div>
         
         {!insight && !loading ? (
-          <div className="text-center py-4">
+          <div className="text-center py-10">
             <button 
               onClick={handleRequestInsight}
-              className="inline-flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-2xl font-bold text-sm hover:bg-indigo-700 transition-all active:scale-95 shadow-lg shadow-indigo-100"
+              className="group relative inline-flex items-center gap-3 bg-indigo-600 text-white px-10 py-5 rounded-[24px] font-black text-sm transition-all hover:bg-indigo-700 hover:scale-105 active:scale-95 shadow-2xl shadow-indigo-200"
             >
-              <Sparkles size={18} /> Ouvir o que o Coach diz
+              <Sparkles size={20} className="group-hover:animate-spin" /> 
+              Analisar meu Jardim com IA
             </button>
-            <p className="mt-3 text-[10px] text-slate-400 font-bold uppercase tracking-widest">Análise baseada no seu jardim</p>
+            <p className="mt-6 text-[10px] text-slate-400 font-black uppercase tracking-[0.3em]">Insights baseados no seu comportamento real</p>
           </div>
         ) : (
-          <>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200">
-                <Sparkles size={20} />
+          <div className="animate-in zoom-in duration-500">
+            <div className="flex items-center gap-4 mb-8">
+              <div className="w-14 h-14 rounded-3xl bg-indigo-600 flex items-center justify-center text-white shadow-2xl shadow-indigo-200">
+                <Sparkles size={28} />
               </div>
-              <span className="text-xs font-bold text-indigo-900 uppercase tracking-widest">Sussurro do Coach</span>
+              <div>
+                <span className="text-xs font-black text-indigo-900 uppercase tracking-widest block">Sussurro do Coach</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Gerado por IA agora</span>
+              </div>
             </div>
             {loading ? (
-              <div className="space-y-3">
-                <div className="h-4 bg-indigo-100 rounded-full w-full animate-pulse" />
-                <div className="h-4 bg-indigo-100 rounded-full w-2/3 animate-pulse" />
+              <div className="space-y-4">
+                <div className="h-5 bg-indigo-50 rounded-full w-full animate-pulse" />
+                <div className="h-5 bg-indigo-50 rounded-full w-3/4 animate-pulse" />
+                <div className="h-5 bg-indigo-50 rounded-full w-1/2 animate-pulse" />
               </div>
             ) : (
-              <p className="text-slate-600 font-medium leading-relaxed italic text-lg animate-in fade-in slide-in-from-bottom-2 duration-500">
+              <p className="text-slate-800 font-bold leading-relaxed italic text-2xl tracking-tight">
                 "{insight}"
               </p>
             )}
-          </>
+          </div>
         )}
       </div>
 
-      {/* Gráfico 1: Céu de Constância (Presença) */}
-      <section className="mb-12">
-        <div className="flex justify-between items-center mb-6 px-2">
-          <h3 className="font-bold text-slate-800 flex items-center gap-2">
-            <Star size={18} className="text-yellow-400 fill-yellow-400" />
-            Céu de Constância
-          </h3>
-          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Frequência</span>
+      {/* Estatísticas de Foco */}
+      <section className="bg-slate-900 rounded-[56px] p-12 text-white shadow-2xl shadow-indigo-900/40 relative overflow-hidden">
+        <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none">
+          <Timer size={180} />
         </div>
-        <div className="bg-slate-900 p-8 rounded-[40px] shadow-xl relative overflow-hidden group">
-          <div className="absolute inset-0 opacity-20">
-            {[...Array(15)].map((_, i) => (
-              <div 
-                key={i} 
-                className="absolute w-1 h-1 bg-white rounded-full animate-pulse"
-                style={{ 
-                  top: `${Math.random() * 100}%`, 
-                  left: `${Math.random() * 100}%`,
-                  animationDelay: `${Math.random() * 3}s`
-                }}
-              />
-            ))}
-          </div>
-          
-          <div className="flex items-end justify-between h-32 gap-3 relative z-10">
-            {last7Days.map((h, i) => (
-              <div key={i} className="flex-1 flex flex-col items-center">
-                <div 
-                  className={`w-full rounded-2xl transition-all duration-1000 relative flex items-center justify-center ${
-                    h.points > 0 ? 'bg-indigo-500/30' : 'bg-white/5'
-                  }`}
-                  style={{ height: `${Math.max((h.points / maxPoints) * 100, 15)}%` }}
-                >
-                  {h.points > 0 && (
-                    <Star 
-                      size={16} 
-                      className={`text-yellow-300 fill-yellow-300 transition-transform duration-700 ${h.points > (maxPoints * 0.7) ? 'scale-125' : 'scale-100'}`} 
-                    />
-                  )}
-                </div>
-                <div className="mt-4 text-[9px] font-bold text-slate-500 uppercase">
-                  {new Date(h.date).toLocaleDateString('pt-BR', { weekday: 'narrow' })}
-                </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div>
+            <div className="flex items-center gap-4 mb-8">
+              <div className="w-14 h-14 rounded-3xl bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20">
+                <Timer size={28} className="text-white" />
               </div>
-            ))}
-          </div>
-          <div className="mt-8 flex items-start gap-3 bg-white/5 p-4 rounded-2xl border border-white/5">
-            <Info size={14} className="text-indigo-400 shrink-0 mt-0.5" />
-            <p className="text-[10px] text-slate-300 leading-relaxed font-medium">
-              Cada estrela brilha porque você escolheu aparecer por você mesmo hoje. Dias sem estrelas são dias de recarregar.
+              <h3 className="font-black text-2xl tracking-tight">Imersão Total</h3>
+            </div>
+            
+            <div className="flex items-baseline gap-4 mb-6">
+              <span className="text-9xl font-black tabular-nums tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-white/30">
+                {history.reduce((acc, curr) => acc + curr.focusMinutes, 0)}
+              </span>
+              <span className="text-3xl font-bold text-indigo-300">MINUTOS</span>
+            </div>
+            
+            <p className="text-indigo-100/60 text-lg leading-relaxed font-medium max-w-md">
+              Esse é o tempo que você dedicou inteiramente a si mesmo. Sem ruído, apenas fluxo.
             </p>
           </div>
-        </div>
-      </section>
-
-      {/* Gráfico 2: Colheita de Micro-vitórias */}
-      <section className="mb-12">
-        <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-6 px-2">
-          <Leaf size={18} className="text-emerald-500" />
-          Colheita de Micro-vitórias
-        </h3>
-        <div className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm transition-all hover:shadow-md">
-          <div className="grid grid-cols-7 gap-3 mb-8">
-            {last7Days.map((h, i) => (
-              <div key={i} className="flex flex-col items-center gap-2">
-                <div className="flex flex-col-reverse gap-1.5 h-24 justify-start">
-                  {h.tasksDone > 0 ? (
-                    Array.from({ length: Math.min(h.tasksDone, 6) }).map((_, j) => (
-                      <div 
-                        key={j} 
-                        className="w-full aspect-square bg-emerald-100 rounded-lg flex items-center justify-center animate-in zoom-in duration-300"
-                        style={{ animationDelay: `${j * 100}ms` }}
-                      >
-                        <Leaf size={10} className="text-emerald-500" />
-                      </div>
-                    ))
-                  ) : (
-                    <div className="w-full aspect-square bg-slate-50 rounded-lg flex items-center justify-center opacity-30">
-                      <Cloud size={10} className="text-slate-300" />
-                    </div>
-                  )}
-                </div>
-                <span className="text-[8px] font-black text-slate-300 uppercase">{new Date(h.date).toLocaleDateString('pt-BR', { day: '2-digit' })}</span>
-              </div>
-            ))}
-          </div>
-          <p className="text-center text-xs font-bold text-emerald-600/70 italic px-4">
-            "Sua colheita não precisa ser grande para ser valiosa. Cada folha é um ato de cuidado."
-          </p>
-        </div>
-      </section>
-
-      {/* Gráfico 3: Maré de Energia */}
-      <section className="mb-12">
-        <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-6 px-2">
-          <Zap size={18} className="text-amber-500" />
-          Sua Maré de Energia
-        </h3>
-        <div className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm relative overflow-hidden group">
-          <div className="flex h-32 items-end justify-between px-2 relative">
-             <svg className="absolute bottom-0 left-0 w-full h-full opacity-5 group-hover:opacity-10 transition-opacity" viewBox="0 0 100 100" preserveAspectRatio="none">
-               <path d="M0,80 C30,70 70,90 100,80 L100,100 L0,100 Z" fill="#FCD34D" />
-             </svg>
-             
-             {last7Days.map((h, i) => {
-               const height = h.energy > 0 ? (h.energy / 10) * 100 : 5;
-               return (
-                <div key={i} className="flex-1 flex flex-col items-center group/item">
-                  <div 
-                    className={`w-3 rounded-full transition-all duration-700 ${h.energy > 7 ? 'bg-amber-400' : h.energy > 4 ? 'bg-amber-200' : 'bg-slate-100'}`}
-                    style={{ height: `${height}%` }}
-                  />
-                  {h.energy > 0 && (
-                    <div className="absolute mb-1 opacity-0 group-hover/item:opacity-100 transition-opacity" style={{ bottom: `${height}%` }}>
-                      <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100">
-                        {h.energy}
-                      </span>
-                    </div>
-                  )}
-                </div>
-               );
-             })}
-          </div>
-          <div className="mt-8 flex justify-between items-center text-[9px] font-black text-slate-400 tracking-tighter uppercase">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-slate-100" />
-              <span>Calma Profunda</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span>Fluxo Intenso</span>
-              <div className="w-2 h-2 rounded-full bg-amber-400" />
-            </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+             <div className="bg-white/5 border border-white/10 p-8 rounded-[40px] backdrop-blur-sm">
+                <Star className="text-yellow-400 mb-4" size={32} fill="currentColor" />
+                <div className="text-4xl font-black mb-1">{history.filter(h => h.points > 50).length}</div>
+                <div className="text-[10px] font-black text-white/40 uppercase tracking-widest">Dias Radiantes</div>
+             </div>
+             <div className="bg-white/5 border border-white/10 p-8 rounded-[40px] backdrop-blur-sm">
+                <Zap className="text-indigo-400 mb-4" size={32} fill="currentColor" />
+                <div className="text-4xl font-black mb-1">{history.reduce((acc, curr) => acc + curr.tasksDone, 0)}</div>
+                <div className="text-[10px] font-black text-white/40 uppercase tracking-widest">Ações Concluídas</div>
+             </div>
           </div>
         </div>
       </section>
 
-      {/* Tempo de Foco */}
-      <section>
-        <div className="bg-gradient-to-br from-indigo-600 to-indigo-900 p-10 rounded-[50px] text-white shadow-2xl shadow-indigo-200 relative overflow-hidden">
-          <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl" />
-          <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-indigo-400/20 rounded-full blur-3xl" />
-          
-          <div className="flex items-center gap-4 mb-8">
-            <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center">
-              <Timer size={24} className="text-white" />
-            </div>
-            <h3 className="font-bold text-xl tracking-tight">Oásis de Foco</h3>
-          </div>
-          
-          <div className="flex items-baseline gap-2 mb-4">
-            <span className="text-6xl font-black tabular-nums tracking-tighter">
-              {history.reduce((acc, curr) => acc + curr.focusMinutes, 0)}
-            </span>
-            <span className="text-2xl font-bold opacity-60">min</span>
-          </div>
-          
-          <p className="text-indigo-100 text-sm leading-relaxed mb-8 font-medium">
-            Esse é o tempo total que você presenteou a si mesmo com atenção plena. Cada minuto foi uma vitória contra a distração.
-          </p>
-          
-          <button className="w-full py-4 bg-white text-indigo-900 rounded-2xl font-bold flex items-center justify-center gap-2 hover:scale-[1.02] transition-all active:scale-95 shadow-lg">
-            Continuar cultivando <ChevronRight size={18} />
-          </button>
-        </div>
-      </section>
+      <style>{`
+        @keyframes dash {
+          from { stroke-dashoffset: 2000; }
+          to { stroke-dashoffset: 0; }
+        }
+        .animate-dash {
+          animation: dash 3s ease-in-out forwards;
+        }
+      `}</style>
     </div>
   );
 };

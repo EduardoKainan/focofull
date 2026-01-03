@@ -25,7 +25,10 @@ const App: React.FC = () => {
     level: 1,
     unlockedElements: ['basic_flower'],
     lastActionDate: new Date().toISOString(),
-    history: []
+    history: [],
+    currentStreak: 0,
+    longestStreak: 0,
+    streakActiveToday: false
   });
   const [coachContext, setCoachContext] = useState<string | undefined>(undefined);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -52,11 +55,37 @@ const App: React.FC = () => {
           difficulties: profileData.difficulties || [],
           onboardingCompleted: true
         });
+
+        // Lógica de Ofensiva baseada na última ação
+        const lastDate = profileData.last_action_date ? new Date(profileData.last_action_date) : null;
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        
+        let streak = profileData.current_streak || 0;
+        let streakActive = false;
+
+        if (lastDate) {
+          const lastDatePlain = new Date(lastDate);
+          lastDatePlain.setHours(0,0,0,0);
+          const diffDays = Math.floor((today.getTime() - lastDatePlain.getTime()) / (1000 * 60 * 60 * 24));
+          
+          if (diffDays === 0) {
+            streakActive = true;
+          } else if (diffDays > 1) {
+            streak = 0; // Perdeu a ofensiva
+          }
+        }
+
         setGamification(prev => ({
           ...prev,
           glowPoints: profileData.glow_points || 0,
-          level: profileData.current_level || 1
+          level: profileData.current_level || 1,
+          currentStreak: streak,
+          longestStreak: profileData.longest_streak || 0,
+          streakActiveToday: streakActive,
+          lastActionDate: profileData.last_action_date
         }));
+        
         if (activeScreen === 'auth' || activeScreen === 'onboarding') setActiveScreen('home');
       }
 
@@ -109,7 +138,32 @@ const App: React.FC = () => {
     return () => subscription.unsubscribe();
   }, [fetchData]);
 
+  const updateStreak = async () => {
+    if (gamification.streakActiveToday) return;
+
+    const newStreak = gamification.currentStreak + 1;
+    const newLongest = Math.max(newStreak, gamification.longestStreak);
+    const now = new Date().toISOString();
+
+    setGamification(prev => ({
+      ...prev,
+      currentStreak: newStreak,
+      longestStreak: newLongest,
+      streakActiveToday: true,
+      lastActionDate: now
+    }));
+
+    try {
+      await supabase.from('profiles').update({
+        current_streak: newStreak,
+        longest_streak: newLongest,
+        last_action_date: now
+      }).eq('id', profile?.id);
+    } catch (e) { console.error("Erro ao atualizar ofensiva", e); }
+  };
+
   const addGlow = async (amount: number) => {
+    await updateStreak(); // Garante a ofensiva ao ganhar pontos
     setGamification(prev => ({
       ...prev,
       glowPoints: prev.glowPoints + amount,
@@ -232,6 +286,8 @@ const App: React.FC = () => {
             tasks={homeTasks} 
             energyLevel={profile?.energyLevel || 5} 
             glowPoints={gamification.glowPoints} 
+            streak={gamification.currentStreak}
+            streakActive={gamification.streakActiveToday}
             onCompleteTask={completeWorkTask}
             onUpdateEnergy={handleUpdateEnergy}
           />
@@ -246,8 +302,8 @@ const App: React.FC = () => {
           <Projects projects={projects} habits={habits} onCompleteNextAction={completeProjectAction} onAddProject={addProject} />
         )}
         {activeScreen === 'focus' && <Focus onComplete={(m) => addGlow(m * 2)} />}
-        {activeScreen === 'garden' && <Garden state={gamification} />}
-        {activeScreen === 'evolution' && <Evolution history={gamification.history} />}
+        {activeScreen === 'garden' && <Garden state={gamification} onNavigateToEvolution={() => setActiveScreen('evolution')} />}
+        {activeScreen === 'evolution' && <Evolution history={gamification.history} streak={gamification.currentStreak} longestStreak={gamification.longestStreak} />}
         <AICoach context={coachContext} />
       </Layout>
     );
